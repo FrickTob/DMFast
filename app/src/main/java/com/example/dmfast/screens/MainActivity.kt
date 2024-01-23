@@ -1,11 +1,10 @@
-package com.example.dmfast
+package com.example.dmfast.screens
 
 import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -34,26 +32,23 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
+import com.example.dmfast.models.AppDatabase
 import com.example.dmfast.ui.theme.DMFastTheme
 import java.io.File
 
@@ -73,7 +68,23 @@ class MainActivity : ComponentActivity() {
                         .padding(Dp(16F)),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomePage()
+                    val navController = rememberNavController()
+                    var selectedCmp by remember { mutableStateOf("") }
+                    val db = Room.databaseBuilder(applicationContext,AppDatabase::class.java, "campaign-database").build()
+
+
+                    NavHost(navController = navController, startDestination = "homePage") {
+                        composable("homePage") {
+                            HomePage(selectedCmp = selectedCmp,
+                                     setSelectedCmp = {selectedCmp = it},
+                                     db = db,
+                                     onNavigateToSplash = {navController.navigate("cmpSplashScreen")})
+                        }
+                        composable("cmpSplashScreen") {
+                            CampaignSplashScreen(selectedCmp = selectedCmp,
+                                                 onNavigateToHome = {navController.navigate("homePage")})
+                        }
+                    }
                 }
             }
         }
@@ -82,9 +93,9 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun HomePage() {
-    val context = LocalContext.current
+fun HomePage(selectedCmp : String, setSelectedCmp : (String) -> Unit, db : AppDatabase, onNavigateToSplash : () -> Unit) {
 
+    val context = LocalContext.current
 
     fun getCampaignNames(): List<String> {
         var files: List<String> = context.fileList().asList()
@@ -96,7 +107,6 @@ fun HomePage() {
 
 
     var campaignNames by remember { mutableStateOf(getCampaignNames()) }
-    var selectedCmp by remember { mutableStateOf("") }
 
     fun storeNewCampaign(name : String) {
         val fileCreated = File(context.filesDir, "cmp$name").createNewFile()
@@ -109,7 +119,7 @@ fun HomePage() {
         val fileDeleted = File(context.filesDir, "cmp$selectedCmp").delete()
         if (fileDeleted) Toast.makeText(context, "File Deleted Successfully", Toast.LENGTH_SHORT).show()
         else Toast.makeText(context, "Error Deleting File. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
-        selectedCmp = ""
+        setSelectedCmp("")
         campaignNames = getCampaignNames()
     }
 
@@ -118,14 +128,14 @@ fun HomePage() {
         val newFileCreatedSuccessfully = File(context.filesDir, "cmp$newName").createNewFile()
         if (!newFileCreatedSuccessfully) {
             Toast.makeText(context, "Error Renaming. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
-            selectedCmp = ""
+            setSelectedCmp("")
             return
         }
         val newFile = File(context.filesDir, "cmp$newName")
         val fileRenamed = File(context.filesDir, "cmp$selectedCmp").renameTo(newFile)
         if (!fileRenamed) {
             Toast.makeText(context, "Error Renaming. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
-            selectedCmp = ""
+            setSelectedCmp("")
             return
         }
         Toast.makeText(context, "File Rename Success!", Toast.LENGTH_SHORT).show()
@@ -155,9 +165,10 @@ fun HomePage() {
             }
         }
         CampaignsList(campaigns = campaignNames,
-                      updateSelectedCmp = {selectedCmp = it},
+                      updateSelectedCmp = {setSelectedCmp(it)},
                       onShowDeleteDialog = {showDeleteCmpDialog = it},
                       onShowRenameDialog = {showRenameCmpDialog = it},
+                      onNavigateToSplash = onNavigateToSplash,
                       modifier = Modifier.weight(1F))
     }
 
@@ -241,11 +252,12 @@ fun CampaignsList(campaigns : List<String>,
                   updateSelectedCmp: (String) -> Unit,
                   onShowDeleteDialog: (Boolean) -> Unit,
                   onShowRenameDialog: (Boolean) -> Unit,
+                  onNavigateToSplash: () -> Unit,
                   modifier : Modifier) {
     if (campaigns.isNotEmpty()) {
         Column(modifier = modifier.verticalScroll(rememberScrollState())) {
             campaigns.forEach { campaign ->
-                CampaignItem(name = campaign, updateSelectedCmp = updateSelectedCmp, onShowDeleteDialog = onShowDeleteDialog, onShowRenameDialog = onShowRenameDialog)
+                CampaignItem(name = campaign, updateSelectedCmp = updateSelectedCmp, onShowDeleteDialog = onShowDeleteDialog, onShowRenameDialog = onShowRenameDialog, onNavigateToSplash = onNavigateToSplash)
             }
         }
     }
@@ -258,7 +270,8 @@ fun CampaignsList(campaigns : List<String>,
 fun CampaignItem(name: String,
                  updateSelectedCmp : (String) -> Unit,
                  onShowDeleteDialog : (Boolean) -> Unit,
-                 onShowRenameDialog : (Boolean) -> Unit) {
+                 onShowRenameDialog : (Boolean) -> Unit,
+                 onNavigateToSplash: () -> Unit) {
     var showDropdown by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -267,9 +280,8 @@ fun CampaignItem(name: String,
             .fillMaxWidth()
             .height(100.dp)
             .clickable {
-                Toast
-                    .makeText(context, "Row Clicked! $name", Toast.LENGTH_SHORT)
-                    .show()
+                updateSelectedCmp(name)
+                onNavigateToSplash()
             },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
