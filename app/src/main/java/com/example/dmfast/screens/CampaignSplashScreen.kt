@@ -31,7 +31,8 @@ fun CampaignSplashScreen(selectedCmp : Campaign, onNavigateToHome : () -> Unit) 
             Text("back")
         }
         Text(selectedCmp.cmpName)
-        BottomNavigation  ()
+        Text(selectedCmp.uid.toString())
+        BottomNavigation()
     }
 }
 

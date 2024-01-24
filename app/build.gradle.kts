@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
+   // id("androidx.room")
 }
 
 android {
@@ -19,6 +20,13 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments["room.schemaLocation"] = "$projectDir/schemas".toString()
+            }
+        }
+
+
     }
 
     buildTypes {

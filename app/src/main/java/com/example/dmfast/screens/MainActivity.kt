@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
                     val db = Room.databaseBuilder(applicationContext,AppDatabase::class.java, "campaign-database").build()
 
 
+
                     NavHost(navController = navController, startDestination = "homePage") {
                         composable("homePage") {
                             HomePage(selectedCmp = selectedCmp,
