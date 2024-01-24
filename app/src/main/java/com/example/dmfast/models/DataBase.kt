@@ -20,13 +20,13 @@ data class Campaign(
 @Dao
 interface CampaignDao {
     @Query("SELECT * FROM campaign")
-    fun getAll() : List<Campaign>
+    suspend fun getAll() : List<Campaign>
 
     @Insert
-    fun insertAll(vararg campaigns : Campaign)
+    suspend fun insertAll(vararg campaigns : Campaign)
 
     @Delete
-    fun delete(campaign: Campaign)
+    suspend fun delete(campaign: Campaign)
 }
 
 @Database(entities = [Campaign::class], version = 1)

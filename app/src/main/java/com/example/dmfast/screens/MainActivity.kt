@@ -5,6 +5,7 @@ import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,13 +46,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.dmfast.models.AppDatabase
+import com.example.dmfast.models.Campaign
 import com.example.dmfast.ui.theme.DMFastTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
+import java.util.UUID
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
 
@@ -69,7 +78,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    var selectedCmp by remember { mutableStateOf("") }
+                    var selectedCmp: Campaign? by remember { mutableStateOf(null ) }
                     val db = Room.databaseBuilder(applicationContext,AppDatabase::class.java, "campaign-database").build()
 
 
@@ -81,7 +90,7 @@ class MainActivity : ComponentActivity() {
                                      onNavigateToSplash = {navController.navigate("cmpSplashScreen")})
                         }
                         composable("cmpSplashScreen") {
-                            CampaignSplashScreen(selectedCmp = selectedCmp,
+                            CampaignSplashScreen(selectedCmp = selectedCmp!!,
                                                  onNavigateToHome = {navController.navigate("homePage")})
                         }
                     }
@@ -93,53 +102,49 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun HomePage(selectedCmp : String, setSelectedCmp : (String) -> Unit, db : AppDatabase, onNavigateToSplash : () -> Unit) {
-
+fun HomePage(selectedCmp : Campaign?, setSelectedCmp : (Campaign?) -> Unit, db : AppDatabase, onNavigateToSplash : () -> Unit) {
+    val mainScope = CoroutineScope(Dispatchers.IO)
     val context = LocalContext.current
 
-    fun getCampaignNames(): List<String> {
-        var files: List<String> = context.fileList().asList()
-        files = files.filter { it.contains("cmp") }
-        files = files.map { it.removePrefix("cmp") }
-        files = files.map { it.replace('_', ' ') }
-        return files
+
+    var campaignNames : List<Campaign> by remember { mutableStateOf(listOf()) }
+
+    fun updateCampaigns() {
+        mainScope.launch {
+            campaignNames = db.campaignDao().getAll()
+        }
     }
 
-
-    var campaignNames by remember { mutableStateOf(getCampaignNames()) }
-
     fun storeNewCampaign(name : String) {
-        val fileCreated = File(context.filesDir, "cmp$name").createNewFile()
-        if (!fileCreated) Toast.makeText(context, "Campaign Name Already Exists", Toast.LENGTH_SHORT).show()
-        campaignNames = getCampaignNames()
+        // make campaign object and add it
+        val newCmp = Campaign(uid = Random.nextInt(), cmpName = name)
+        mainScope.launch {
+            db.campaignDao().insertAll(newCmp)
+            updateCampaigns()
+        }
     }
 
     fun deleteCampaign() {
-        if (selectedCmp == "") return
-        val fileDeleted = File(context.filesDir, "cmp$selectedCmp").delete()
-        if (fileDeleted) Toast.makeText(context, "File Deleted Successfully", Toast.LENGTH_SHORT).show()
-        else Toast.makeText(context, "Error Deleting File. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
-        setSelectedCmp("")
-        campaignNames = getCampaignNames()
+        if (selectedCmp == null) return
+        mainScope.launch {
+            db.campaignDao().delete(selectedCmp)
+            updateCampaigns()
+        }
+        // find matching campaign
+//        val fileDeleted = File(context.filesDir, "cmp$selectedCmp").delete()
+//        if (fileDeleted) Toast.makeText(context, "File Deleted Successfully", Toast.LENGTH_SHORT).show()
+//        else Toast.makeText(context, "Error Deleting File. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
+//        setSelectedCmp("")
     }
 
     fun renameCampaign(newName : String) {
-        if (selectedCmp == "") return
-        val newFileCreatedSuccessfully = File(context.filesDir, "cmp$newName").createNewFile()
-        if (!newFileCreatedSuccessfully) {
-            Toast.makeText(context, "Error Renaming. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
-            setSelectedCmp("")
-            return
+        if (selectedCmp == null) return
+        mainScope.launch {
+            val newCmp = Campaign(selectedCmp.uid, newName)
+            db.campaignDao().delete(selectedCmp)
+            db.campaignDao().insertAll(newCmp)
+            updateCampaigns()
         }
-        val newFile = File(context.filesDir, "cmp$newName")
-        val fileRenamed = File(context.filesDir, "cmp$selectedCmp").renameTo(newFile)
-        if (!fileRenamed) {
-            Toast.makeText(context, "Error Renaming. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
-            setSelectedCmp("")
-            return
-        }
-        Toast.makeText(context, "File Rename Success!", Toast.LENGTH_SHORT).show()
-        campaignNames = getCampaignNames()
     }
 
     var showCreateCmpDialog by remember { mutableStateOf(false) }
@@ -147,12 +152,15 @@ fun HomePage(selectedCmp : String, setSelectedCmp : (String) -> Unit, db : AppDa
     var showDeleteCmpDialog by remember { mutableStateOf(false)}
 
 
+    LaunchedEffect(Unit) {
+        updateCampaigns()
+    }
 
     if (showCreateCmpDialog) {
         CreateCmpDialog(closeDialog = {showCreateCmpDialog = false}, onCampaignNamed = {storeNewCampaign(it)})
     }
     if (showRenameCmpDialog) {
-        RenameCmpDialog(prevName = selectedCmp, closeDialog = { showRenameCmpDialog = false }, onCampaignRenamed = {renameCampaign(it)})
+        RenameCmpDialog(prevCampaign = selectedCmp!!, closeDialog = { showRenameCmpDialog = false }, onCampaignRenamed = {renameCampaign(it)})
     }
     if (showDeleteCmpDialog) {
         DeleteCmpConfirmationDialog(closeDialog = {showDeleteCmpDialog = false}, onCmpDeleted = {deleteCampaign()})
@@ -205,9 +213,9 @@ fun CreateCmpDialog(closeDialog : () -> Unit, onCampaignNamed : (String) -> Unit
 }
 
 @Composable
-fun RenameCmpDialog(prevName: String , closeDialog: () -> Unit, onCampaignRenamed : (String) -> Unit) {
+fun RenameCmpDialog(prevCampaign: Campaign , closeDialog: () -> Unit, onCampaignRenamed : (String) -> Unit) {
     val context = LocalContext.current
-    var cmpTitleText by remember { mutableStateOf(prevName) }
+    var cmpTitleText by remember { mutableStateOf(prevCampaign.cmpName) }
     Dialog(onDismissRequest = { closeDialog() }) {
         ElevatedCard {
             Column {
@@ -248,8 +256,8 @@ fun DeleteCmpConfirmationDialog(closeDialog: () -> Unit, onCmpDeleted : () -> Un
 }
 
 @Composable
-fun CampaignsList(campaigns : List<String>,
-                  updateSelectedCmp: (String) -> Unit,
+fun CampaignsList(campaigns : List<Campaign>,
+                  updateSelectedCmp: (Campaign?) -> Unit,
                   onShowDeleteDialog: (Boolean) -> Unit,
                   onShowRenameDialog: (Boolean) -> Unit,
                   onNavigateToSplash: () -> Unit,
@@ -257,7 +265,7 @@ fun CampaignsList(campaigns : List<String>,
     if (campaigns.isNotEmpty()) {
         Column(modifier = modifier.verticalScroll(rememberScrollState())) {
             campaigns.forEach { campaign ->
-                CampaignItem(name = campaign, updateSelectedCmp = updateSelectedCmp, onShowDeleteDialog = onShowDeleteDialog, onShowRenameDialog = onShowRenameDialog, onNavigateToSplash = onNavigateToSplash)
+                CampaignItem(campaign = campaign, updateSelectedCmp = updateSelectedCmp, onShowDeleteDialog = onShowDeleteDialog, onShowRenameDialog = onShowRenameDialog, onNavigateToSplash = onNavigateToSplash)
             }
         }
     }
@@ -267,8 +275,8 @@ fun CampaignsList(campaigns : List<String>,
 }
 
 @Composable
-fun CampaignItem(name: String,
-                 updateSelectedCmp : (String) -> Unit,
+fun CampaignItem(campaign: Campaign?,
+                 updateSelectedCmp : (Campaign?) -> Unit,
                  onShowDeleteDialog : (Boolean) -> Unit,
                  onShowRenameDialog : (Boolean) -> Unit,
                  onNavigateToSplash: () -> Unit) {
@@ -280,17 +288,19 @@ fun CampaignItem(name: String,
             .fillMaxWidth()
             .height(100.dp)
             .clickable {
-                updateSelectedCmp(name)
+                updateSelectedCmp(campaign)
                 onNavigateToSplash()
             },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
-            Text(text = name, Modifier.padding(PaddingValues(start = 16.dp)), fontSize = 24.sp)
+            if (campaign != null) {
+                Text(text = campaign.cmpName, Modifier.padding(PaddingValues(start = 16.dp)), fontSize = 24.sp)
+            }
         Box {
             Icon(imageVector = Icons.Default.MoreVert, contentDescription = "More Options",
                 Modifier
                     .fillMaxHeight()
-                    .clickable { showDropdown = true; updateSelectedCmp(name) })
+                    .clickable { showDropdown = true; updateSelectedCmp(campaign) })
             DropdownMenu(expanded = showDropdown, onDismissRequest = { showDropdown = false}) {
                 TextButton(onClick = { showDropdown = false; onShowRenameDialog(true) }, Modifier.fillMaxWidth()) {
                     Text("Rename", Modifier.fillMaxWidth())

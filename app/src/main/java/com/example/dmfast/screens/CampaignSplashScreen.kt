@@ -13,15 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.Navigation
 import com.example.dmfast.models.BottomNavItem
+import com.example.dmfast.models.Campaign
 import com.google.android.material.navigation.NavigationBarItemView
 import com.google.gson.Gson
 import java.io.File
 
 @Composable
-fun CampaignSplashScreen(selectedCmp : String, onNavigateToHome : () -> Unit) {
+fun CampaignSplashScreen(selectedCmp : Campaign, onNavigateToHome : () -> Unit) {
     val context = LocalContext.current
-    val fileString = File(context.filesDir, "cmp$selectedCmp").readText()
-    val gson = Gson()
 
 
     Column {
@@ -31,13 +30,8 @@ fun CampaignSplashScreen(selectedCmp : String, onNavigateToHome : () -> Unit) {
         }) {
             Text("back")
         }
-        TextButton(onClick = {
-            Toast.makeText(context, "File String $fileString", Toast.LENGTH_SHORT).show()
-        }) {
-            Text("Show String")
-        }
-        Text(selectedCmp)
-        BottomNavigation()
+        Text(selectedCmp.cmpName)
+        BottomNavigation  ()
     }
 }
 
