@@ -1,5 +1,6 @@
 package com.example.dmfast.models
 
+import androidx.compose.ui.layout.IntermediateMeasureScope
 import androidx.room.AutoMigration
 import androidx.room.ColumnInfo
 import androidx.room.Dao
@@ -10,21 +11,12 @@ import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
-
+import androidx.room.TypeConverter
 
 @Entity
 data class Campaign(
     @PrimaryKey(autoGenerate = true) val uid : Int,
     @ColumnInfo(name = "campaign_name") val cmpName : String
-)
-
-@Entity
-data class PlayableCharacter(
-    @PrimaryKey(autoGenerate = true) val uid : Int,
-    @ColumnInfo(name = "name") val name : String,
-    @ColumnInfo(name = "level") val level : Int = 1,
-    @ColumnInfo(name = "class") val charClass : String,
-    @ColumnInfo(name = "subclass") val subClass : String = "None"
 )
 
 @Dao
@@ -39,7 +31,97 @@ interface CampaignDao {
     suspend fun delete(campaign: Campaign)
 }
 
-@Database(entities = [Campaign::class, PlayableCharacter::class], version = 1, exportSchema = true)
+@Entity
+data class PlayableCharacter(
+    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @ColumnInfo(name = "campaign_id") val cmpID : Int,
+    @ColumnInfo(name = "name") val name : String,
+    @ColumnInfo(name = "level") val level : Int = 1,
+    @ColumnInfo(name = "class") val charClass : String,
+    @ColumnInfo(name = "subclass") val subClass : String = "None",
+    @ColumnInfo(name = "is_alive") val isAlive : Boolean = true
+)
+
+@Dao
+interface PlayableCharacterDao {
+    @Query("SELECT * FROM playablecharacter")
+    suspend fun getAll() : List<PlayableCharacter>
+
+    @Query("SELECT * FROM playablecharacter WHERE campaign_id = :id")
+    suspend fun getAllForID(id : Int) : List<PlayableCharacter>
+    @Insert
+    suspend fun insertAll(vararg playableCharacters : PlayableCharacter)
+
+    @Delete
+    suspend fun delete(playableCharacter: PlayableCharacter)
+}
+
+@Entity
+data class Enemy(
+    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @ColumnInfo(name = "name") val name : String,
+    @ColumnInfo(name = "cr") val cr : Int,
+    @ColumnInfo(name = "ac") val ac : Int,
+    @ColumnInfo(name = "description") val description : String
+)
+
+@Dao
+interface EnemyDao {
+    @Query("SELECT * FROM enemy")
+    suspend fun getAll() : List<Enemy>
+
+    @Query("SELECT * FROM enemy WHERE name = :name")
+    suspend fun getEnemy(name : String) : List<Enemy>
+    @Insert
+    suspend fun insertAll(vararg enemies : Enemy)
+
+    @Delete
+    suspend fun delete(enemy: Enemy)
+}
+
+@Entity
+data class Encounter(
+    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @ColumnInfo(name = "campaign_id") val cmpID : Int,
+    @ColumnInfo(name = "party_members") val partyMemberIDsString : String,
+    @ColumnInfo(name = "enemies") val enemyIdsString : String
+)
+
+@Dao
+interface EncounterDao {
+    @Query("SELECT * FROM encounter")
+    suspend fun getAll() : List<Encounter>
+    @Query("SELECT * FROM enemy WHERE name = :id")
+    suspend fun getALlForID(id : Int) : List<Encounter>
+    @Insert
+    suspend fun insertAll(vararg encounters : Encounter)
+
+    @Delete
+    suspend fun delete(encounter: Encounter)
+}
+
+@Entity
+data class Note(
+    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @ColumnInfo(name = "campaign_id") val cmpID : Int,
+    @ColumnInfo(name = "title") val title : String,
+    @ColumnInfo(name = "contents") val contents : String
+)
+
+@Dao
+interface NoteDao {
+    @Query("SELECT * FROM note")
+    suspend fun getAll() : List<Note>
+    @Query("SELECT * FROM note WHERE campaign_id = :id")
+    suspend fun getALlForID(id : Int) : List<Note>
+    @Insert
+    suspend fun insertAll(vararg notes : Note)
+
+    @Delete
+    suspend fun delete(note: Note)
+}
+
+@Database(entities = [Campaign::class, PlayableCharacter::class], version = 2, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun campaignDao() : CampaignDao
 }

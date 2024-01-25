@@ -73,13 +73,12 @@ class MainActivity : ComponentActivity() {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(Dp(16F)),
+                        .fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
                     var selectedCmp: Campaign? by remember { mutableStateOf(null ) }
-                    val db = Room.databaseBuilder(applicationContext,AppDatabase::class.java, "campaign-database").build()
+                    val db = Room.databaseBuilder(applicationContext,AppDatabase::class.java, "campaign-database").fallbackToDestructiveMigration().build()
 
 
 
