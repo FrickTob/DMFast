@@ -15,7 +15,7 @@ import androidx.room.TypeConverter
 
 @Entity
 data class Campaign(
-    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @PrimaryKey(autoGenerate = true) val id : Int,
     @ColumnInfo(name = "campaign_name") val cmpName : String
 )
 
@@ -33,7 +33,7 @@ interface CampaignDao {
 
 @Entity
 data class PlayableCharacter(
-    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @PrimaryKey(autoGenerate = true) val id : Int,
     @ColumnInfo(name = "campaign_id") val cmpID : Int,
     @ColumnInfo(name = "name") val name : String,
     @ColumnInfo(name = "level") val level : Int = 1,
@@ -58,7 +58,7 @@ interface PlayableCharacterDao {
 
 @Entity
 data class Enemy(
-    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @PrimaryKey(autoGenerate = true) val id : Int,
     @ColumnInfo(name = "name") val name : String,
     @ColumnInfo(name = "cr") val cr : Int,
     @ColumnInfo(name = "ac") val ac : Int,
@@ -81,7 +81,7 @@ interface EnemyDao {
 
 @Entity
 data class Encounter(
-    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @PrimaryKey(autoGenerate = true) val id : Int,
     @ColumnInfo(name = "campaign_id") val cmpID : Int,
     @ColumnInfo(name = "party_members") val partyMemberIDsString : String,
     @ColumnInfo(name = "enemies") val enemyIdsString : String
@@ -91,7 +91,7 @@ data class Encounter(
 interface EncounterDao {
     @Query("SELECT * FROM encounter")
     suspend fun getAll() : List<Encounter>
-    @Query("SELECT * FROM enemy WHERE name = :id")
+    @Query("SELECT * FROM encounter WHERE campaign_id = :id")
     suspend fun getALlForID(id : Int) : List<Encounter>
     @Insert
     suspend fun insertAll(vararg encounters : Encounter)
@@ -102,7 +102,7 @@ interface EncounterDao {
 
 @Entity
 data class Note(
-    @PrimaryKey(autoGenerate = true) val uid : Int,
+    @PrimaryKey(autoGenerate = true) val id : Int,
     @ColumnInfo(name = "campaign_id") val cmpID : Int,
     @ColumnInfo(name = "title") val title : String,
     @ColumnInfo(name = "contents") val contents : String
@@ -121,7 +121,11 @@ interface NoteDao {
     suspend fun delete(note: Note)
 }
 
-@Database(entities = [Campaign::class, PlayableCharacter::class], version = 2, exportSchema = true)
+@Database(entities = [Campaign::class, PlayableCharacter::class, Enemy::class, Encounter::class, Note::class], version = 1, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun campaignDao() : CampaignDao
+    abstract fun playableCharacterDao() : PlayableCharacterDao
+    abstract fun enemyDao() : EnemyDao
+    abstract fun encounterDao() : EncounterDao
+    abstract fun noteDao() : NoteDao
 }

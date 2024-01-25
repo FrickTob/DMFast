@@ -91,7 +91,8 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("cmpSplashScreen") {
                             CampaignSplashScreen(selectedCmp = selectedCmp!!,
-                                                 onNavigateToHome = {navController.navigate("homePage")})
+                                                 onNavigateToHome = {navController.navigate("homePage")},
+                                                 db = db)
                         }
                     }
                 }
@@ -117,7 +118,7 @@ fun HomePage(selectedCmp : Campaign?, setSelectedCmp : (Campaign?) -> Unit, db :
 
     fun storeNewCampaign(name : String) {
         // make campaign object and add it
-        val newCmp = Campaign(uid = Random.nextInt(), cmpName = name)
+        val newCmp = Campaign(id = 0, cmpName = name)
         mainScope.launch {
             db.campaignDao().insertAll(newCmp)
             updateCampaigns()
@@ -130,17 +131,12 @@ fun HomePage(selectedCmp : Campaign?, setSelectedCmp : (Campaign?) -> Unit, db :
             db.campaignDao().delete(selectedCmp)
             updateCampaigns()
         }
-        // find matching campaign
-//        val fileDeleted = File(context.filesDir, "cmp$selectedCmp").delete()
-//        if (fileDeleted) Toast.makeText(context, "File Deleted Successfully", Toast.LENGTH_SHORT).show()
-//        else Toast.makeText(context, "Error Deleting File. Sorry, Please Try Again Another Time", Toast.LENGTH_SHORT).show()
-//        setSelectedCmp("")
     }
 
     fun renameCampaign(newName : String) {
         if (selectedCmp == null) return
         mainScope.launch {
-            val newCmp = Campaign(selectedCmp.uid, newName)
+            val newCmp = Campaign(selectedCmp.id, newName)
             db.campaignDao().delete(selectedCmp)
             db.campaignDao().insertAll(newCmp)
             updateCampaigns()
