@@ -168,6 +168,7 @@ fun HomePage(selectedCmp : Campaign?, setSelectedCmp : (Campaign?) -> Unit, db :
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Button")
             }
         }
+        Text("Your Campaigns")
         CampaignsList(campaigns = campaignNames,
                       updateSelectedCmp = {setSelectedCmp(it)},
                       onShowDeleteDialog = {showDeleteCmpDialog = it},

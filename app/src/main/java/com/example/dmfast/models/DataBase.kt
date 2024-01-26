@@ -12,6 +12,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
+import androidx.room.Update
 
 @Entity
 data class Campaign(
@@ -104,8 +105,8 @@ interface EncounterDao {
 data class Note(
     @PrimaryKey(autoGenerate = true) val id : Int,
     @ColumnInfo(name = "campaign_id") val cmpID : Int,
-    @ColumnInfo(name = "title") val title : String,
-    @ColumnInfo(name = "contents") val contents : String
+    @ColumnInfo(name = "title") var title : String,
+    @ColumnInfo(name = "contents") var contents : String
 )
 
 @Dao
@@ -117,6 +118,8 @@ interface NoteDao {
     @Insert
     suspend fun insertAll(vararg notes : Note)
 
+    @Update
+    suspend fun updateNote(note: Note)
     @Delete
     suspend fun delete(note: Note)
 }
