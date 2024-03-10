@@ -33,25 +33,14 @@ import kotlinx.coroutines.launch
 fun EditNoteView(campaign: Campaign,
              selectedNote : Note?,
              db: AppDatabase,
-             onSubmitPress : (String, String) -> Unit,
+             onSubmitPress : (String) -> Unit,
              onClosePress : () -> Unit) {
     val mainScope = CoroutineScope(Dispatchers.IO)
-    var titleText by remember { mutableStateOf(selectedNote?.title ?: "") }
     var contentsText by remember { mutableStateOf(selectedNote?.contents ?: "") }
-    val focusRequester by remember { mutableStateOf(FocusRequester()) }
 
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
 // TODO: Add checks for proper note before submit
     Column(Modifier.fillMaxWidth()) {
-        Text("Note Title")
-        TextField(value = titleText,
-            onValueChange = {titleText = it},
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester))
         Text("Description")
         TextField(value = contentsText,
             onValueChange = {contentsText = it},
@@ -63,7 +52,7 @@ fun EditNoteView(campaign: Campaign,
             TextButton(onClick = { onClosePress() }) {
                 Text("Cancel")
             }
-            TextButton(onClick = { onSubmitPress(titleText, contentsText) }) {
+            TextButton(onClick = { onSubmitPress(contentsText) }) {
                 Text("Submit")
             }
         }
@@ -89,14 +78,20 @@ fun NotesScreen(campaign : Campaign, db : AppDatabase) {
         }
     }
 
-    fun submitNote(title : String, contents : String) {
+    fun submitNote(contents : String) {
+        val lines = contents.split("\n")
+        val title = lines[0] + "\n"
+        lines.drop(0)
+        val description = lines.reduce {
+                acc, s ->  "$acc\n$s"
+        }
         if (selectedNote == null) { // Creating New Note
             mainScope.launch {
                 val newNote = Note(
                     id = 0,
                     cmpID = campaign.id,
                     title = title,
-                    contents = contents
+                    contents = description
                 )
                 db.noteDao().insertAll(newNote)
                 updateNotes()
@@ -105,7 +100,7 @@ fun NotesScreen(campaign : Campaign, db : AppDatabase) {
         else { // Update Existing Note
             mainScope.launch {
                 selectedNote!!.title = title
-                selectedNote!!.contents = contents
+                selectedNote!!.contents = description
                 db.noteDao().updateNote(selectedNote!!)}
         }
     }
@@ -115,14 +110,15 @@ fun NotesScreen(campaign : Campaign, db : AppDatabase) {
             db.noteDao().delete(note)
             updateNotes()
         }
+        selectedNote = null
     }
 
     if (showNoteEditScreen) {
         EditNoteView(campaign = campaign, db = db, selectedNote = selectedNote,
             onClosePress = {
                 showNoteEditScreen = false},
-            onSubmitPress = {title,contents ->
-                submitNote(title, contents);
+            onSubmitPress = {contents ->
+                submitNote(contents);
                 showNoteEditScreen = false})
     }
     else {

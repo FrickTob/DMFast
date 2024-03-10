@@ -12,7 +12,9 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import androidx.room.Update
+import com.google.gson.annotations.SerializedName
 
 @Entity
 data class Campaign(
@@ -61,11 +63,8 @@ interface PlayableCharacterDao {
 data class Enemy(
     @PrimaryKey(autoGenerate = true) val id : Int,
     @ColumnInfo(name = "name") val name : String,
-    @ColumnInfo(name = "cr") val cr : Int,
-    @ColumnInfo(name = "ac") val ac : Int,
-    @ColumnInfo(name = "description") val description : String
+    @ColumnInfo(name = "cr") val cr : Double
 )
-
 @Dao
 interface EnemyDao {
     @Query("SELECT * FROM enemy")
@@ -124,7 +123,7 @@ interface NoteDao {
     suspend fun delete(note: Note)
 }
 
-@Database(entities = [Campaign::class, PlayableCharacter::class, Enemy::class, Encounter::class, Note::class], version = 1, exportSchema = true)
+@Database(entities = [Campaign::class, PlayableCharacter::class, Enemy::class, Encounter::class, Note::class], version = 4, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun campaignDao() : CampaignDao
     abstract fun playableCharacterDao() : PlayableCharacterDao

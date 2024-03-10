@@ -1,6 +1,7 @@
 package com.example.dmfast.screens
 
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -53,11 +54,17 @@ import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.dmfast.models.AppDatabase
 import com.example.dmfast.models.Campaign
+import com.example.dmfast.models.Encounter
+import com.example.dmfast.models.Enemy
 import com.example.dmfast.ui.theme.DMFastTheme
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
 import java.util.UUID
 import kotlin.random.Random
 
@@ -106,6 +113,7 @@ class MainActivity : ComponentActivity() {
 fun HomePage(selectedCmp : Campaign?, setSelectedCmp : (Campaign?) -> Unit, db : AppDatabase, onNavigateToSplash : () -> Unit) {
     val mainScope = CoroutineScope(Dispatchers.IO)
     val context = LocalContext.current
+    var showText by remember { mutableStateOf("") }
 
 
     var campaignNames : List<Campaign> by remember { mutableStateOf(listOf()) }
@@ -169,6 +177,7 @@ fun HomePage(selectedCmp : Campaign?, setSelectedCmp : (Campaign?) -> Unit, db :
             }
         }
         Text("Your Campaigns")
+        Text(showText)
         CampaignsList(campaigns = campaignNames,
                       updateSelectedCmp = {setSelectedCmp(it)},
                       onShowDeleteDialog = {showDeleteCmpDialog = it},
