@@ -85,7 +85,10 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     var selectedCmp: Campaign? by remember { mutableStateOf(null ) }
-                    val db = Room.databaseBuilder(applicationContext,AppDatabase::class.java, "campaign-database").fallbackToDestructiveMigration().build()
+                    val db = Room.databaseBuilder(applicationContext,AppDatabase::class.java, "campaign-database")
+                        .fallbackToDestructiveMigration()
+                        .createFromAsset("campaign-database")
+                        .build()
 
 
 
@@ -159,6 +162,7 @@ fun HomePage(selectedCmp : Campaign?, setSelectedCmp : (Campaign?) -> Unit, db :
     LaunchedEffect(Unit) {
         updateCampaigns()
     }
+
 
     if (showCreateCmpDialog) {
         CreateCmpDialog(closeDialog = {showCreateCmpDialog = false}, onCampaignNamed = {storeNewCampaign(it)})
